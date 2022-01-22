@@ -1,0 +1,3 @@
+Non-linear scales are good for data with dramatic differences in scale between data points,
+such as exponentially distributed data.
+For instance, charts of stocks that see massive growth over a period of time will use a log scale.

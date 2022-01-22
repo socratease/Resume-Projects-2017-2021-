@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+<style>
+
+path.link {
+  fill: none;
+  stroke: #666;
+  stroke-width: 1.5px;
+}
+
+circle {
+  fill: #ccc;
+  stroke: #fff;
+  stroke: black;
+  stroke-width: 1.5px;
+}
+
+text {
+  fill: #000;
+  font: 10px sans-serif;
+  pointer-events: none;
+}
+</style>
+<html xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882"><head>
+<!--[if gte mso 9]><xml>
+<mso:CustomDocumentProperties>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Editor>
+<mso:xd_Signature msdt:dt="string"></mso:xd_Signature>
+<mso:Order msdt:dt="string">35500.0000000000</mso:Order>
+<mso:ComplianceAssetId msdt:dt="string"></mso:ComplianceAssetId>
+<mso:TemplateUrl msdt:dt="string"></mso:TemplateUrl>
+<mso:xd_ProgID msdt:dt="string"></mso:xd_ProgID>
+<mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author msdt:dt="string">Hull, Matthew D</mso:display_urn_x003a_schemas-microsoft-com_x003a_office_x003a_office_x0023_Author>
+<mso:ContentTypeId msdt:dt="string">0x010100D48F87729E805A4096AD64C4E51DACBE</mso:ContentTypeId>
+<mso:_SourceUrl msdt:dt="string"></mso:_SourceUrl>
+<mso:_SharedFileIndex msdt:dt="string"></mso:_SharedFileIndex>
+</mso:CustomDocumentProperties>
+</xml><![endif]-->
+<title></title></head><body>
+<script>
+
+d3.dsv(",", "board_games.csv", function(d) {
+  return {
+    source: d.source,
+    target: d.target,
+    value: +d.value
+  }
+}).then(function(data) {
+
+  var links = data;
+
+  var nodes = {};
+
+  // compute the distinct nodes from the links.
+  links.forEach(function(link) {
+      link.source = nodes[link.source] || (nodes[link.source] = {name: link.source});
+      link.target = nodes[link.target] || (nodes[link.target] = {name: link.target});
+  });
+
+  var width = 1200,
+      height = 700;
+
+  var force = d3.forceSimulation()
+      .nodes(d3.values(nodes))
+      .force("link", d3.forceLink(links).distance(100))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force("x", d3.forceX())
+      .force("y", d3.forceY())
+      .force("charge", d3.forceManyBody().strength(-250))
+      .alphaTarget(1)
+      .on("tick", tick);
+
+  var colors = d3.scaleLinear().domain([1,10])
+                .range(["white", "green"]);
+  
+  //(["#ffffd9","#feffd8","#feffd6","#fdfed5","#fdfed4","#fcfed3","#fcfed2","#fbfdd0","#fafdcf","#fafdce","#f9fdcd","#f9fdcb","#f8fcca","#f7fcc9","#f7fcc8","#f6fcc7","#f6fbc6","#f5fbc5","#f4fbc4","#f4fbc3","#f3fac2","#f2fac1","#f1fac0","#f1f9bf","#f0f9be","#eff9bd","#eff9bc","#eef8bb","#edf8bb","#ecf8ba","#ebf7b9","#eaf7b9","#eaf7b8","#e9f6b8","#e8f6b7","#e7f6b7","#e6f5b6","#e5f5b6","#e4f4b5","#e3f4b5","#e2f4b5","#e1f3b4","#e0f3b4","#dff2b4","#ddf2b4","#dcf1b4","#dbf1b4","#daf0b4","#d9f0b3","#d7efb3","#d6efb3","#d5eeb3","#d3eeb3","#d2edb3","#d1edb4","#cfecb4","#ceecb4","#ccebb4","#cbebb4","#c9eab4","#c8e9b4","#c6e9b4","#c4e8b4","#c3e7b5","#c1e7b5","#bfe6b5","#bde5b5","#bce5b5","#bae4b5","#b8e3b6","#b6e2b6","#b4e2b6","#b2e1b6","#b0e0b6","#aedfb6","#acdfb7","#aadeb7","#a8ddb7","#a6dcb7","#a4dbb7","#a2dbb8","#a0dab8","#9ed9b8","#9cd8b8","#99d7b9","#97d7b9","#95d6b9","#93d5b9","#91d4b9","#8fd3ba","#8dd2ba","#8ad2ba","#88d1ba","#86d0bb","#84cfbb","#82cebb","#80cebb","#7ecdbc","#7cccbc","#7acbbc","#78cabc","#76cabd","#73c9bd","#71c8bd","#6fc7bd","#6dc6be","#6bc6be","#6ac5be","#68c4be","#66c3bf","#64c3bf","#62c2bf","#60c1bf","#5ec0c0","#5cbfc0","#5abfc0","#59bec0","#57bdc0","#55bcc1","#53bbc1","#52bac1","#50bac1","#4eb9c1","#4db8c1","#4bb7c1","#49b6c2","#48b5c2","#46b4c2","#45b3c2","#43b2c2","#42b1c2","#40b0c2","#3fafc2","#3daec2","#3cadc2","#3bacc2","#39abc2","#38aac2","#37a9c2","#35a8c2","#34a7c2","#33a6c2","#32a5c2","#31a3c1","#30a2c1","#2fa1c1","#2ea0c1","#2d9fc1","#2c9dc0","#2b9cc0","#2a9bc0","#299ac0","#2898bf","#2897bf","#2796bf","#2695be","#2693be","#2592be","#2591bd","#248fbd","#248ebc","#238cbc","#238bbb","#228abb","#2288ba","#2287ba","#2185b9","#2184b9","#2182b8","#2181b8","#217fb7","#217eb6","#207cb6","#207bb5","#2079b5","#2078b4","#2076b3","#2075b3","#2073b2","#2072b1","#2070b1","#216fb0","#216daf","#216cae","#216aae","#2169ad","#2167ac","#2166ac","#2164ab","#2163aa","#2261aa","#2260a9","#225ea8","#225da7","#225ca7","#225aa6","#2259a5","#2257a5","#2256a4","#2354a3","#2353a3","#2352a2","#2350a1","#234fa0","#234ea0","#234c9f","#234b9e","#234a9d","#23499d","#23479c","#23469b","#23459a","#224499","#224298","#224197","#224096","#223f95","#223e94","#213d93","#213c92","#213a91","#203990","#20388f","#20378d","#1f368c","#1f358b","#1e348a","#1e3388","#1d3287","#1d3185","#1c3184","#1c3082","#1b2f81","#1a2e7f","#1a2d7e","#192c7c","#182b7a","#172b79","#172a77","#162975","#152874","#142772","#132770","#13266e","#12256c","#11246b","#102469","#0f2367","#0e2265","#0d2163","#0d2161","#0c2060","#0b1f5e","#0a1e5c","#091e5a","#081d58"]);
+
+  
+
+  var svg = d3.select("body").append("svg")
+      .attr("width", width)
+      .attr("height", height);
+
+  // add the links
+  var path = svg.append("g")
+      .selectAll("path")
+      .data(links)
+      .enter()
+      .append("path")
+      .attr("class", function(d) { return "link " + d.type; })
+      .style("stroke", function(d) { 
+          if (d.value > 0) {
+               return "green"
+          } else {
+              return "gray"
+          }})
+      .style("stroke-width", function(d) { 
+          if (d.value > 0) {
+               return 1
+          } else {
+              return 3
+          }})
+      .style("stroke-dasharray", function(d) { 
+          if (d.value > 0) {
+               return "2,5"
+          } else {
+              return "0,0"
+          }})
+          ;
+
+  // define the nodes
+  var node = svg.selectAll(".node")
+      .data(force.nodes())
+      .enter().append("g")
+      .attr("class", "node")
+      .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  // add the nodes
+  node.append("circle")
+      .attr("r", function (d) {
+          d.weight = path.filter(function(l) {
+              return l.source.index == d.index || l.target.index == d.index
+          }).size();
+          var minRadius = 5;
+          return minRadius + (d.weight * 2);
+      })
+      .style("fill", function (d) {
+        d.weight = path.filter(function(l) {
+              return l.source.index == d.index || l.target.index == d.index
+          }).size();
+          return colors(d.weight);
+      })
+      .on("dblclick", function(d) {
+            d3.select(this)
+                .style("fill", function (d) {
+                    d.weight = path.filter(function(l) {
+                        return l.source.index == d.index || l.target.index == d.index
+                    }).size();
+                    return colors(d.weight)
+                })
+            d.fx = null;
+            d.fy = null;
+      });
+
+  // add the lables
+  node.append("text")
+        .text(function (d) { return d.name; })
+        .attr("dx", 8)
+        .attr("dy", -8);  
+
+  //add username
+  var username = svg.append("text")
+      .attr("x", 800)
+      .attr("y", 10)
+      .text("cgraves36")
+
+  // add the curvy lines
+  function tick() {
+      path.attr("d", function(d) {
+          var dx = d.target.x - d.source.x,
+              dy = d.target.y - d.source.y,
+              dr = Math.sqrt(dx * dx + dy * dy);
+          return "M" +
+              d.source.x + "," +
+              d.source.y + "A" +
+              dr + "," + dr + " 0 0,1 " +
+              d.target.x + "," +
+              d.target.y;
+      });
+
+      node.attr("transform", function(d) {
+          return "translate(" + d.x + "," + d.y + ")"; 
+      });
+  };
+
+  function dragstarted(d) {
+      if (!d3.event.active) force.alphaTarget(0.3).restart();
+      d.fx = d.x;
+      d.fy = d.y;
+  };
+
+  function dragged(d) {
+      d.fx = d3.event.x;
+      d.fy = d3.event.y;
+  };
+
+  function dragended(d) {
+      if (!d3.event.active) force.alphaTarget(0);
+      d.fixed = true;
+      if (d.fixed == true) {
+          d.fx = d.x;
+          d.fy = d.y;
+          d3.select(this).select("circle").style("fill", "lavender")
+      }
+      else {
+          d.fx = null;
+          d.fy = null;
+      }
+  };
+  
+}).catch(function(error) {
+  console.log(error);
+});
+
+</script>
+</body>
+</html>

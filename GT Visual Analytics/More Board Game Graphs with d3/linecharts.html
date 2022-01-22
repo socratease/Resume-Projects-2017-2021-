@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<head>
+  <title>Line Charts</title>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+  <script type="text/javascript" src="../lib/d3-dsv.min.js"></script>
+  <style>
+    
+    div.bar {
+        display: inline-block;
+        width: 20px;
+        height: 75px;
+        background-color: teal;
+        margin-right: 2px; 
+    } 
+    h1 {
+        text-align: center;
+        width: 1000px;
+    }
+    title {
+        display: inline-block;
+        font-family:Arial, Helvetica, sans-serif;
+    }
+    path.chartlines {
+        fill: none;
+        /* stroke: #ed3700; */
+    }
+    .series_label {
+        fill: black;
+        font: 12px sans-serif;
+    }
+    .dot_label {
+        fill: white;
+        font: 10px sans-serif;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-weight: bolder;
+        text-anchor: middle;
+        dominant-baseline: middle;
+    }
+    div.pagebreak {
+        page-break-after: always;
+    }
+  </style>
+  <h1><title>Number of Ratings 2016-2020</title></h1>
+  <div id="figure1"></div>
+  <div class="pagebreak"> </div>
+  <h1><title>Number of Ratings 2016-2020 with Rankings</title></h1>
+  <div id="figure2"></div>
+  <div class="pagebreak"> </div>
+  <h1><title>Number of Ratings 2016-2020 (Square root Scale)</title></h1>
+  <div id="figure3"></div>
+  <div class="pagebreak"> </div>
+  <h1><title>Number of Ratings 2016-2020 (Log Scale)</title></h1>
+  <div id="figure4"></div>
+</head>
+
+<body>
+    
+    <script>
+        // define the dimensions and margins for the graph
+        var w = 1000
+        var h = 600
+        var barPadding = 2
+        var padding = 120
+    
+    
+
+    
+    
+        // Get the data
+        var pathToCsv = "boardgame_ratings.csv";		// path to csv
+        
+        var parseTime = d3.timeParse("%Y-%m-%d")
+        
+        var dataset = d3.csv(pathToCsv)
+
+        dataset.then(function (data) {
+            var slices = data.columns.slice(1).map(function(id){
+                return {
+                    id: id,
+                    values: data.map(function(d){
+                        return{
+                            date: parseTime(d.date),
+                            measurement: +d[id]
+                        };
+                    })
+                };
+            });
+            console.log("column Headers", data.columns);
+            console.log("Slices", slices);// format data attributes if required
+        
+            ratings = slices.filter((element, index) => { return index % 2 == 0; })
+            for (x in ratings) {
+                ratings[x].id = ratings[x].id.split("=")[0];
+                //ratings[x].rank = null;
+            };
+            console.log("Ratings", ratings)
+
+            ranks = slices.filter((element, index) => { return index % 2 != 0; })
+            for (x in ranks) {
+                ranks[x].id = ranks[x].id.split("=")[0];
+            };
+
+            for (var i = 0; i < ranks.length; i++) {
+                console.log(ratings[i].values)
+                for (var j = 0; j < ranks[i].values.length; j++) {
+                    // console.log(ratings[i].values[j].measurement)
+                    ratings[i].values[j]["rank"] = ranks[i].values[j].measurement;
+                }
+            };
+            console.log("Ranks", ranks)
+
+            // you should see the data in your browser's developer tools console 
+            
+            /* Create bar plot using data from csv */
+        
+// -------------------- CHART 1 ---------------------------------------------------------//
+
+            // create scales x & y for X and Y axis and set their ranges
+            // set domains based on data
+            var startDate = d3.min(data, function(d) { return d.date; })
+            var endDate = d3.max(data, function(d) { return d.date; })
+
+            console.log(endDate)
+
+            var xScale = d3.scaleTime()
+                        .range([padding, w - padding])
+                        .domain(d3.extent(data, function(d) { 
+                            return parseTime(d.date) }));
+
+            var yScale = d3.scaleLinear()
+                        .rangeRound([h - padding, padding])
+                        .domain( [0, d3.max(ratings, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return d.measurement + 10; });
+                            })
+                        ]);
+            
+            var xAxis = d3.axisBottom()
+                        .ticks(d3.timeMonth.every(3))
+                        .tickFormat(d3.timeFormat('%b %y'))
+                        .scale(xScale);
+        
+            var yAxis = d3.axisLeft()
+                        .scale(yScale)
+                        .ticks((slices[0].values).length / 5);
+            
+        
+            // append svg element to the body of the page
+            // set dimensions and position of the svg element
+            var svg = d3.select("#figure1")
+                        .append("svg") 
+                        .attr("width", w)
+                        .attr("height", h);
+
+            // Add lines to chart
+
+            var line = d3.line()
+                        .x(function(d) { return xScale(d.date); })
+                        .y(function(d) { return yScale(d.measurement); });
+                        
+            var lines  = svg.selectAll("lines")
+                        .data(ratings)
+                        .enter()
+                        .append("g");
+
+            var colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+            lines.append("path")
+                        .attr("class", "chartlines")
+                        .attr("d", function(d) { return line(d.values); })
+                        .style("stroke", function(d) {
+                            return colors(d.id)
+                            });
+                        
+            // Add labels to lines
+            lines.append("text")
+                        .attr("class", "series_label")
+                        .datum(function(d) {
+                            return {
+                                id: d.id,
+                                value: d.values[d.values.length - 1]
+                            };
+                        })
+                        .attr("transform", function(d) {
+                            return "translate(" + (xScale(d.value.date) + 0)
+                            + "," + (yScale(d.value.measurement) + 0) + ")";
+                        })
+                        .attr("x", 5)
+                        .text(function(d) {return (d.id); })
+                        .style("fill", function(d) {
+                            return colors(d.id)
+                        });
+            
+            // var circs = svg.selectAll("g.dot")
+            //                 .data(ratings.filter(function(element, index) {
+            //                     var keep = [0,2,3,4];
+            //                     return keep.indexOf(index) >= 0;
+            //                 }))
+            //                 .enter()
+            //                 .append("g")
+            //                 // .datum(function(d) {
+            //                 //     return {
+            //                 //         id: d.id,
+            //                 //         value: d.values
+            //                 //     }
+            //                 // })
+            //                 .style("fill", function(d) {
+            //                     console.log(d.id)
+            //                     return colors(d.id) })
+            //                 .selectAll("circles")
+            //                 .data(function(d) { 
+            //                     return d.values.filter(function(element, index) {
+            //                         return index % 3 == 2; 
+            //                     });
+            //                 })
+            //                 .enter()
+            //                 .append("circle")
+            //                     .attr("r", 15)
+            //                     // .attr("transform", function(d) {
+            //                     //     return "translate(" + (xScale(d.values.date)+ 0)
+            //                     //     + "," + (yScale(d.values.measurement) + 0) + ")";
+            //                     // });
+            //                     .attr("cx", function(d) {
+            //                         return xScale(d.date);
+            //                     })
+            //                     .attr("cy", function(d) {
+            //                         return yScale(d.measurement); 
+            //                     })
+                                
+            // var circlabs = svg.selectAll("g.labs")
+            //                     .data(ratings.filter(function(element, index) {
+            //                         var keep = [0,2,3,4];
+            //                         return keep.indexOf(index) >= 0;
+            //                     }))
+            //                     .enter()
+            //                     .append("g")
+            //                     .selectAll("circlelabels")
+            //                     .data(function(d) { 
+            //                         return d.values.filter(function(element, index) {
+            //                             return index % 3 == 2; 
+            //                         });
+            //                     })
+            //                     .enter()
+            //                     .append("text")
+            //                     .attr("class", "dot_label")
+            //                     .text(function(d) { return d.rank})
+            //                     .attr("x", function(d) { 
+            //                         return xScale(d.date);
+            //                     })
+            //                     .attr("y", function(d) { 
+            //                         return yScale(d.measurement);
+            //                     });
+        
+            // // Add the X Axis
+            svg.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis);
+        
+            // // Add the text label for X Axis
+            svg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", h - padding / 2)
+                .attr("font-family", "sans-serif")
+                .text("Month");
+        
+            // // Add the Y Axis
+            svg.append("g")
+                .attr("transform", "translate(" + padding + ",0)" )
+                .call(yAxis);
+        
+            // // Add the text label for Y axis
+            svg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", padding / 3)
+                .attr("x", 0 - (h / 2))
+                .attr("font-family", "sans-serif")
+                .text("Num of Ratings");
+
+        
+// -------------------  CHART #2 --------------------------------------//
+
+            // create scales x & y for X and Y axis and set their ranges
+            // set domains based on data
+            var startDate2 = d3.min(data, function(d) { return d.date; })
+            var endDate2 = d3.max(data, function(d) { return d.date; })
+
+            var xScale2 = d3.scaleTime()
+                        .range([padding, w - padding])
+                        .domain(d3.extent(data, function(d) { 
+                            return parseTime(d.date) }));
+
+            var yScale2 = d3.scaleLinear()
+                        .rangeRound([h - padding, padding])
+                        .domain( [0, d3.max(ratings, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return d.measurement + 10; });
+                            })
+                        ]);
+            
+            var xAxis2 = d3.axisBottom()
+                        .ticks(d3.timeMonth.every(3))
+                        .tickFormat(d3.timeFormat('%b %y'))
+                        .scale(xScale2);
+        
+            var yAxis2 = d3.axisLeft()
+                        .scale(yScale2)
+                        .ticks((slices[0].values).length / 5);
+
+
+            
+            // append svg element to the body of the page
+            // set dimensions and position of the svg element
+            var svg2 = d3.select("#figure2")
+                        .append("svg") 
+                        .attr("width", w)
+                        .attr("height", h);
+
+            // Add lines to chart
+
+            var line2 = d3.line()
+                        .x(function(d) { return xScale2(d.date); })
+                        .y(function(d) { return yScale2(d.measurement); });
+                        
+            var lines2  = svg2.selectAll("lines")
+                        .data(ratings)
+                        .enter()
+                        .append("g");
+
+            lines2.append("path")
+                        .attr("class", "chartlines")
+                        .attr("d", function(d) { return line2(d.values); })
+                        .style("stroke", function(d) {
+                            return colors(d.id)
+                            });
+                        
+            // Add labels to lines
+            lines2.append("text")
+                        .attr("class", "series_label")
+                        .datum(function(d) {
+                            return {
+                                id: d.id,
+                                value: d.values[d.values.length - 1]
+                            };
+                        })
+                        .attr("transform", function(d) {
+                            return "translate(" + (xScale2(d.value.date) + 0)
+                            + "," + (yScale2(d.value.measurement) + 0) + ")";
+                        })
+                        .attr("x", 5)
+                        .text(function(d) {return (d.id); })
+                        .style("fill", function(d) {
+                            return colors(d.id)
+                        });
+            
+            var circs2 = svg2.selectAll("g.dot")
+                            .data(ratings.filter(function(element, index) {
+                                var keep = [0,2,3,4];
+                                return keep.indexOf(index) >= 0;
+                            }))
+                            .enter()
+                            .append("g")
+                            // .datum(function(d) {
+                            //     return {
+                            //         id: d.id,
+                            //         value: d.values
+                            //     }
+                            // })
+                            .style("fill", function(d) {
+                                console.log(d.id)
+                                return colors(d.id) })
+                            .selectAll("circles")
+                            .data(function(d) { 
+                                return d.values.filter(function(element, index) {
+                                    return index % 3 == 2; 
+                                });
+                            })
+                            .enter()
+                            .append("circle")
+                                .attr("r", 15)
+                                // .attr("transform", function(d) {
+                                //     return "translate(" + (xScale(d.values.date)+ 0)
+                                //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                                // });
+                                .attr("cx", function(d) {
+                                    return xScale2(d.date);
+                                })
+                                .attr("cy", function(d) {
+                                    return yScale2(d.measurement); 
+                                })
+                                
+            var circlabs2 = svg2.selectAll("g.labs")
+                                .data(ratings.filter(function(element, index) {
+                                    var keep = [0,2,3,4];
+                                    return keep.indexOf(index) >= 0;
+                                }))
+                                .enter()
+                                .append("g")
+                                .selectAll("circlelabels")
+                                .data(function(d) { 
+                                    return d.values.filter(function(element, index) {
+                                        return index % 3 == 2; 
+                                    });
+                                })
+                                .enter()
+                                .append("text")
+                                .attr("class", "dot_label")
+                                .text(function(d) { return d.rank})
+                                .attr("x", function(d) { 
+                                    return xScale2(d.date);
+                                })
+                                .attr("y", function(d) { 
+                                    return yScale2(d.measurement);
+                                });
+        
+        
+            // // Add the X Axis
+            svg2.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis2);
+        
+            // // Add the text label for X Axis
+            svg2.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", h - padding / 2)
+                .attr("font-family", "sans-serif")
+                .text("Month");
+        
+            // // Add the Y Axis
+            svg2.append("g")
+                .attr("transform", "translate(" + padding + ",0)" )
+                .call(yAxis2);
+        
+            // // Add the text label for Y axis
+            svg2.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", padding / 3)
+                .attr("x", 0 - (h / 2))
+                .attr("font-family", "sans-serif")
+                .text("Num of Ratings");
+            
+            // // Add the legend for dots
+            svg2.append("circle")
+                .attr("r", 15)
+                .attr("cx", w - 40)
+                .attr("cy", h - padding)
+                .style("fill", "#000000")
+                // .attr("font-family", "sans-serif")
+            
+            svg2.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "middle")
+                .attr("y", h - padding)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("rank")
+                .style("fill", "#FFFFFF")
+                .style("font", "10px sans-serif");
+
+            svg2.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", h - padding - 20)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("BGG Rank")
+                .style("font", "12px sans-serif");
+
+// -------------------  CHART #3 --------------------------------------//            
+            
+            // create scales x & y for X and Y axis and set their ranges
+            // set domains based on data
+            var startDate3 = d3.min(data, function(d) { return d.date; })
+            var endDate3 = d3.max(data, function(d) { return d.date; })
+
+            var xScale3 = d3.scaleTime()
+                        .range([padding, w - padding])
+                        .domain(d3.extent(data, function(d) { 
+                            return parseTime(d.date) }));
+
+            var yScale3 = d3.scalePow()
+                        .exponent(0.5)
+                        .rangeRound([h - padding, padding])
+                        .domain( [0.000001, d3.max(ratings, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return d.measurement + 10; });
+                            })
+                        ]);
+            
+            var xAxis3 = d3.axisBottom()
+                        .ticks(d3.timeMonth.every(3))
+                        .tickFormat(d3.timeFormat('%b %y'))
+                        .scale(xScale3);
+        
+            var yAxis3 = d3.axisLeft()
+                        .scale(yScale3)
+                        .ticks((slices[0].values).length / 5);
+
+            // append svg element to the body of the page
+            // set dimensions and position of the svg element
+            var svg3 = d3.select("#figure3")
+                        .append("svg") 
+                        .attr("width", w)
+                        .attr("height", h);
+
+            // Add lines to chart
+
+            var line3 = d3.line()
+                        .x(function(d) { return xScale3(d.date); })
+                        .y(function(d) { return yScale3(d.measurement); });
+                        
+            var lines3  = svg3.selectAll("lines")
+                        .data(ratings)
+                        .enter()
+                        .append("g");
+
+            lines3.append("path")
+                        .attr("class", "chartlines")
+                        .attr("d", function(d) { return line3(d.values); })
+                        .style("stroke", function(d) {
+                            return colors(d.id)
+                            });
+                        
+            // Add labels to lines
+            lines3.append("text")
+                        .attr("class", "series_label")
+                        .datum(function(d) {
+                            return {
+                                id: d.id,
+                                value: d.values[d.values.length - 1]
+                            };
+                        })
+                        .attr("transform", function(d) {
+                            return "translate(" + (xScale3(d.value.date) + 0)
+                            + "," + (yScale3(d.value.measurement) + 0) + ")";
+                        })
+                        .attr("x", 5)
+                        .text(function(d) {return (d.id); })
+                        .style("fill", function(d) {
+                            return colors(d.id)
+                        });
+            
+            var circs3 = svg3.selectAll("g.dot")
+                            .data(ratings.filter(function(element, index) {
+                                var keep = [0,2,3,4];
+                                return keep.indexOf(index) >= 0;
+                            }))
+                            .enter()
+                            .append("g")
+                            // .datum(function(d) {
+                            //     return {
+                            //         id: d.id,
+                            //         value: d.values
+                            //     }
+                            // })
+                            .style("fill", function(d) {
+                                console.log(d.id)
+                                return colors(d.id) })
+                            .selectAll("circles")
+                            .data(function(d) { 
+                                return d.values.filter(function(element, index) {
+                                    return index % 3 == 2; 
+                                });
+                            })
+                            .enter()
+                            .append("circle")
+                                .attr("r", 15)
+                                // .attr("transform", function(d) {
+                                //     return "translate(" + (xScale(d.values.date)+ 0)
+                                //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                                // });
+                                .attr("cx", function(d) {
+                                    return xScale3(d.date);
+                                })
+                                .attr("cy", function(d) {
+                                    return yScale3(d.measurement); 
+                                })
+                                
+            var circlabs3 = svg3.selectAll("g.labs")
+                                .data(ratings.filter(function(element, index) {
+                                    var keep = [0,2,3,4];
+                                    return keep.indexOf(index) >= 0;
+                                }))
+                                .enter()
+                                .append("g")
+                                .selectAll("circlelabels")
+                                .data(function(d) { 
+                                    return d.values.filter(function(element, index) {
+                                        return index % 3 == 2; 
+                                    });
+                                })
+                                .enter()
+                                .append("text")
+                                .attr("class", "dot_label")
+                                .text(function(d) { return d.rank})
+                                .attr("x", function(d) { 
+                                    return xScale3(d.date);
+                                })
+                                .attr("y", function(d) { 
+                                    return yScale3(d.measurement);
+                                });
+        
+        
+            // // Add the X Axis
+            svg3.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis3);
+        
+            // // Add the text label for X Axis
+            svg3.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", h - padding / 2)
+                .attr("font-family", "sans-serif")
+                .text("Month");
+        
+            // // Add the Y Axis
+            svg3.append("g")
+                .attr("transform", "translate(" + padding + ",0)" )
+                .call(yAxis3);
+        
+            // // Add the text label for Y axis
+            svg3.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", padding / 3)
+                .attr("x", 0 - (h / 2))
+                .attr("font-family", "sans-serif")
+                .text("Num of Ratings");
+
+            // // Add the legend for dots
+            svg3.append("circle")
+                .attr("r", 15)
+                .attr("cx", w - 40)
+                .attr("cy", h - padding)
+                .style("fill", "#000000")
+                // .attr("font-family", "sans-serif")
+            
+            svg3.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "middle")
+                .attr("y", h - padding)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("rank")
+                .style("fill", "#FFFFFF")
+                .style("font", "10px sans-serif");
+
+            svg3.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", h - padding - 20)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("BGG Rank")
+                .style("font", "12px sans-serif");
+
+// -------------------  CHART #4 --------------------------------------//            
+            
+            // create scales x & y for X and Y axis and set their ranges
+            // set domains based on data
+            var startDate4 = d3.min(data, function(d) { return d.date; })
+            var endDate4 = d3.max(data, function(d) { return d.date; })
+
+            var xScale4 = d3.scaleTime()
+                        .range([padding, w - padding])
+                        .domain(d3.extent(data, function(d) { 
+                            return parseTime(d.date) }));
+
+            var yScale4 = d3.scaleLog()
+                        .rangeRound([h - padding, padding])
+                        .domain( [0.000001, d3.max(ratings, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return d.measurement + 10; });
+                            })
+                        ]);
+            
+            var xAxis4 = d3.axisBottom()
+                        .ticks(d3.timeMonth.every(3))
+                        .tickFormat(d3.timeFormat('%b %y'))
+                        .scale(xScale4);
+        
+            var yAxis4 = d3.axisLeft()
+                        .scale(yScale4)
+                        .ticks((slices[0].values).length / 5);
+
+            // append svg element to the body of the page
+            // set dimensions and position of the svg element
+            var svg4 = d3.select("#figure4")
+                        .append("svg") 
+                        .attr("width", w)
+                        .attr("height", h);
+
+            // Add lines to chart
+
+            var line4 = d3.line()
+                        .x(function(d) { return xScale4(d.date); })
+                        .y(function(d) { return yScale4(d.measurement); });
+                        
+            var lines4  = svg4.selectAll("lines")
+                        .data(ratings)
+                        .enter()
+                        .append("g");
+
+            lines4.append("path")
+                        .attr("class", "chartlines")
+                        .attr("d", function(d) { return line4(d.values); })
+                        .style("stroke", function(d) {
+                            return colors(d.id)
+                            });
+                        
+            // Add labels to lines
+            lines4.append("text")
+                        .attr("class", "series_label")
+                        .datum(function(d) {
+                            return {
+                                id: d.id,
+                                value: d.values[d.values.length - 1]
+                            };
+                        })
+                        .attr("transform", function(d) {
+                            return "translate(" + (xScale4(d.value.date) + 0)
+                            + "," + (yScale4(d.value.measurement) + 0) + ")";
+                        })
+                        .attr("x", 5)
+                        .text(function(d) {return (d.id); })
+                        .style("fill", function(d) {
+                            return colors(d.id)
+                        });
+            
+            var circs4 = svg4.selectAll("g.dot")
+                            .data(ratings.filter(function(element, index) {
+                                var keep = [0,2,3,4];
+                                return keep.indexOf(index) >= 0;
+                            }))
+                            .enter()
+                            .append("g")
+                            // .datum(function(d) {
+                            //     return {
+                            //         id: d.id,
+                            //         value: d.values
+                            //     }
+                            // })
+                            .style("fill", function(d) {
+                                console.log(d.id)
+                                return colors(d.id) })
+                            .selectAll("circles")
+                            .data(function(d) { 
+                                return d.values.filter(function(element, index) {
+                                    return index % 3 == 2; 
+                                });
+                            })
+                            .enter()
+                            .append("circle")
+                                .attr("r", 15)
+                                // .attr("transform", function(d) {
+                                //     return "translate(" + (xScale(d.values.date)+ 0)
+                                //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                                // });
+                                .attr("cx", function(d) {
+                                    return xScale4(d.date);
+                                })
+                                .attr("cy", function(d) {
+                                    return yScale4(d.measurement); 
+                                })
+                                
+            var circlabs4 = svg4.selectAll("g.labs")
+                                .data(ratings.filter(function(element, index) {
+                                    var keep = [0,2,3,4];
+                                    return keep.indexOf(index) >= 0;
+                                }))
+                                .enter()
+                                .append("g")
+                                .selectAll("circlelabels")
+                                .data(function(d) { 
+                                    return d.values.filter(function(element, index) {
+                                        return index % 3 == 2; 
+                                    });
+                                })
+                                .enter()
+                                .append("text")
+                                .attr("class", "dot_label")
+                                .text(function(d) { return d.rank})
+                                .attr("x", function(d) { 
+                                    return xScale4(d.date);
+                                })
+                                .attr("y", function(d) { 
+                                    return yScale4(d.measurement);
+                                });
+        
+        
+            // // Add the X Axis
+            svg4.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis4);
+        
+            // // Add the text label for X Axis
+            svg4.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", h - padding / 2)
+                .attr("font-family", "sans-serif")
+                .text("Month");
+        
+            // // Add the Y Axis
+            svg4.append("g")
+                .attr("transform", "translate(" + padding + ",0)" )
+                .call(yAxis4);
+        
+            // // Add the text label for Y axis
+            svg4.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", padding / 3)
+                .attr("x", 0 - (h / 2))
+                .attr("font-family", "sans-serif")
+                .text("Num of Ratings");
+
+            // // Add the legend for dots
+            svg4.append("circle")
+                .attr("r", 15)
+                .attr("cx", w - 40)
+                .attr("cy", h - padding)
+                .style("fill", "#000000")
+                // .attr("font-family", "sans-serif")
+            
+            svg4.append("text")
+                .attr("text-anchor", "middle")
+                .attr("dominant-baseline", "middle")
+                .attr("y", h - padding)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("rank")
+                .style("fill", "#FFFFFF")
+                .style("font", "10px sans-serif");
+
+            svg4.append("text")
+                .attr("text-anchor", "middle")
+                .attr("y", h - padding - 20)
+                .attr("x", w - 40)
+                .attr("font-family", "sans-serif")
+                .text("BGG Rank")
+                .style("font", "12px sans-serif");
+
+            });
+    
+    
+        </script>
+
+<!-- put username in top right -->
+<!-- <p style="text-align:right;width:1000px;">cgraves36</p> -->
+</body>

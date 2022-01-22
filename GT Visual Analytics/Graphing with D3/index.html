@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+
+<!-- run: http-server & -->
+
+<head>
+  <style>
+    
+    div.bar {
+        display: inline-block;
+        width: 20px;
+        height: 75px;
+        background-color: teal;
+        margin-right: 2px; 
+    } 
+    h1 {
+        text-align: center;
+        width: 1000px;
+    }
+    title {
+        display: inline-block;
+        font-family:Arial, Helvetica, sans-serif;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1><title>Running Total of TMDb Movies by Year</title></h1>
+  <script src="lib/d3/d3.min.js"></script>
+  <script src="lib/d3-dsv/d3-dsv.min.js"></script>
+  <script src="lib/d3-fetch/d3-fetch.min.js"></script>
+
+
+  <script>
+    // define the dimensions and margins for the graph
+    var w = 1000
+    var h = 600
+    var barPadding = 2
+    var padding = 80
+
+
+    // define function to parse time in years format
+    
+    var parseTime = d3.timeParse("%Y")
+
+    // create scales x & y for X and Y axis and set their ranges
+    var x = d3.scaleTime()
+                .range([padding, w - padding])
+
+    var y = d3.scaleLinear()
+                .range([h - padding, padding])
+
+    var xAxis = d3.axisBottom()
+                  .scale(x);
+
+    var yAxis = d3.axisLeft()
+                  .scale(y)
+                  ;
+
+    // append svg element to the body of the page
+    // set dimensions and position of the svg element
+    var svg = d3.select("body")
+                .append("svg") 
+                .attr("width", w)
+                .attr("height", h);
+
+
+    // Get the data
+	var pathToCsv = "q3.csv";		// path to csv
+	
+    d3.dsv(",", pathToCsv, function (d) {
+      return {
+        year : parseTime(d.year),
+        running_total : +d.running_total
+        // format data attributes if required
+      }
+    }).then(function (data) {
+      console.log(data); // you should see the data in your browser's developer tools console 
+      
+      /* Create bar plot using data from csv */
+
+      // set the domains of X and Y scales based on data
+      var startDate = d3.min(data, function(d) { return d.year; })
+      var endDate = d3.max(data, function(d) { return d.year; })
+      
+      x.domain([d3.timeDay.offset(startDate, -10), d3.timeDay.offset(endDate, 10)]);
+      
+      y.domain( [0, d3.max(data, function(d) { return d.running_total; })]);
+
+      // Add bars to svg - create new elements based on your data
+      svg.selectAll("rect")
+          .data(data)
+          .enter()
+          .append("rect")
+          .attr("x", function(d) {
+              return x(d.year);
+          })
+          .attr("y", function(d) {
+            return y(d.running_total);
+            //return y(h - d.running_total);
+            //return h - y(d.running_total)
+          })
+          /*.attr("width", 20)
+          .attr("height", 100)
+          /*.attr("x", function(d, i) {
+            return x(i * (w / data.length));
+          })*/
+          .attr("width", w / data.length - barPadding)
+          .attr("height", function(d) {
+            return h - padding - y(d.running_total);
+          })
+          .attr("fill", "teal")
+          ;
+
+
+      // Add the X Axis
+      svg.append("g")
+          .call(xAxis)
+          .attr("transform", "translate(0," + (h - padding) + ")")
+          ;
+
+      // Add the text label for X Axis
+      svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("x", (w / 2 ))
+          .attr("y", h - padding / 2)
+          .attr("font-family", "sans-serif")
+          .text("Year");
+
+      // Add the Y Axis
+      svg.append("g")
+          .attr("transform", "translate(" + padding + ",0)" )
+          .call(yAxis);
+
+      // Add the text label for Y axis
+      svg.append("text")
+          .attr("text-anchor", "middle")
+          .attr("transform", "rotate(-90)")
+          .attr("y", padding / 3)
+          .attr("x", 0 - (h / 2))
+          .attr("font-family", "sans-serif")
+          .text("Running Total");
+
+
+      /*// Add text labels to data
+      svg.selectAll("text")
+          .data(data)
+          .enter()
+          .append("text")
+          .text(function(d) {
+            return d.running_total;
+          })
+          .attr("x", function(d, i) {
+            return i * (w / data.length) + 5; //+5?
+          })
+          .attr("y", function(d) {
+            return h - d.running_total + 15;
+          })
+          .attr("font-family", "sans-serif")
+          .attr("font-size", "11px")
+          .attr("fill", "white");*/
+
+
+    }).catch(function (error) {
+      console.log(error);
+    });
+
+
+  </script>
+  <p style="text-align:right;width:1000px;">cgraves36</p>
+</body>

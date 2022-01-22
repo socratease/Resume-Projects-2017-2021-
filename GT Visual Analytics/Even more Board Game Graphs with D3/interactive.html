@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<head>
+  <title>Games Rating: 2015 - 2019</title>
+  <meta charset="utf-8">
+  <script type="text/javascript" src="../lib/d3.v5.min.js"></script>
+  <script type="text/javascript" src="../lib/d3-dsv.min.js"></script>
+  <style>
+    
+    div.bar {
+        display: inline-block;
+        width: 20px;
+        height: 75px;
+        background-color: teal;
+        margin-right: 2px; 
+    } 
+    h1 {
+        text-align: center;
+        width: 1000px;
+    }
+    title {
+        display: inline-block;
+        font-family:Arial, Helvetica, sans-serif;
+    }
+    path.chartlines {
+        fill: none;
+        /* stroke: #ed3700; */
+    }
+    .series_label {
+        fill: black;
+        font: 12px sans-serif;
+    }
+    .dot_label {
+        fill: black;
+        font: 10px sans-serif;
+        font-family: "Trebuchet MS", Helvetica, sans-serif;
+        font-weight: bolder;
+        text-anchor: middle;
+        dominant-baseline: middle;
+    }
+    .small_label {
+      paint-order: stroke;
+      stroke: #ffffff;
+      stroke-width: 10px;
+    }
+    div.pagebreak {
+        page-break-after: always;
+    }
+    .smallbar {
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body>
+<h1><title>Board Games by Rating 2015-2019</title></h1>
+
+<div id="container1"></div>
+<div id="container2"></div>
+
+
+<script>
+
+        // define the dimensions and margins for the graph
+        var w = 800
+        var h = 400
+        var barPadding = 2
+        var padding = 60   
+
+        // dimensions for second graph
+        var w2 = 800
+        var h2 = 200
+        var barPadding2 = 2
+        var bigpadding2 = 200
+        var lilpadding2 = 40 
+        // Get the data
+        var pathToCsv = "average-rating.csv";		// path to csv
+        
+        var parseTime = d3.timeParse("%Y-%m-%d")
+        
+        var dataset = d3.csv(pathToCsv)
+
+        // Take Dataset, nest it, and then fill empty rating values for each year.
+        dataset.then(function (data) {
+            var aggdata = d3.nest()
+                            .key( function(d) { return +d.year; }).sortKeys(d3.ascending)
+                            .key( function(d) { return Math.floor(d.average_rating)}).sortKeys(d3.ascending)
+                            .entries(data);
+            
+            console.log("column Headers", data.columns);
+            console.log("Nest (aggdata)", aggdata);// format data attributes if required
+
+            for (var i = 0; i < aggdata.length; i++) {
+              yearkeys = []
+              console.log(aggdata[i], aggdata[i].values.length, i)
+              for (var j = 0; j < aggdata[i].values.length; j++) {
+                yearkeys.push(aggdata[i].values[j].key);
+              }
+              for (var k = 0; k < 11; k++) {
+                if (!yearkeys.includes(k.toString())) { 
+                    aggdata[i].values.push( {"key": k.toString(), "values": [] }) 
+                }
+                aggdata[i].values[k]["count"] = aggdata[i].values[k].values.length
+              }
+              aggdata[i].values.sort(function(a, b) {
+                return +a.key - +b.key
+              })
+            }
+            
+            console.log("Filled Nest (aggdata)", aggdata)
+
+            var aggdata = aggdata.slice(4,9)
+
+        // Take dataset, nest and roll to count leaves, then fill empty values for ratings
+        // dataset.then(function (data) {
+        //     var aggdata = d3.nest()
+        //                     .key( function(d) { return +d.year; }).sortKeys(d3.ascending)
+        //                     .key( function(d) { return Math.floor(d.average_rating)}).sortKeys(d3.ascending)
+        //                     .rollup
+        //                     .entries(data);
+            
+        //     console.log("column Headers", data.columns);
+        //     console.log("Nest (aggdata)", aggdata);// format data attributes if required
+
+        //     for (var i = 0; i < aggdata.length; i++) {
+        //       yearkeys = []
+        //       console.log(aggdata[i], aggdata[i].values.length, i)
+        //       for (var j = 0; j < aggdata[i].values.length; j++) {
+        //         yearkeys.push(aggdata[i].values[j].key);
+        //       }
+        //       for (var k = 0; k < 11; k++) {
+        //         if (!yearkeys.includes(k.toString())) { 
+        //             aggdata[i].values.push( {"key": k.toString(), "values": [] }) 
+        //         }
+        //       }
+        //       aggdata[i].values.sort(function(a, b) {
+        //         return +a.key - +b.key
+        //       })
+        //     }
+
+        //     console.log("Aggdata Rollup", aggdataRU)
+        
+
+
+            // ratings = slices.filter((element, index) => { return index % 2 == 0; })
+            // for (x in ratings) {
+            //     ratings[x].id = ratings[x].id.split("=")[0];
+            //     //ratings[x].rank = null;
+            // };
+            // console.log("Ratings", ratings)
+
+            // ranks = slices.filter((element, index) => { return index % 2 != 0; })
+            // for (x in ranks) {
+            //     ranks[x].id = ranks[x].id.split("=")[0];
+            // };
+
+            // for (var i = 0; i < ranks.length; i++) {
+            //     console.log(ratings[i].values)
+            //     for (var j = 0; j < ranks[i].values.length; j++) {
+            //         // console.log(ratings[i].values[j].measurement)
+            //         ratings[i].values[j]["rank"] = ranks[i].values[j].measurement;
+            //     }
+            // };
+            // console.log("Ranks", ranks)
+
+            // you should see the data in your browser's developer tools console 
+            
+            /* Create bar plot using data from csv */
+        
+// -------------------- CHART 1 ---------------------------------------------------------//
+
+            // create scales x & y for X and Y axis and set their ranges
+            // set domains based on data
+
+            // var startDate = d3.min(data, function(d) { return d.date; })
+            // var endDate = d3.max(data, function(d) { return d.date; })
+
+            // console.log(endDate)
+
+            var xScale = d3.scaleLinear()
+                        .range([padding, w - padding])
+                        .domain([0, d3.max(aggdata, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return +d.key; });
+                            })
+                        ]);
+
+
+            var yScale = d3.scaleLinear()
+                        .range([h - padding, padding])
+                        .domain( [0, d3.max(aggdata, function(c) {
+                            return d3.max(c.values, function(d) {
+                                return d.count + 10; });
+                            })
+                        // .domain( [0, d3.max(aggdata, function(c) {
+                        //     return d3.max(c.values, function(d) {
+                        //         return d.measurement + 10; });
+                        //     })
+                        ]);
+            
+            var xAxis = d3.axisBottom()
+                        // .ticks(d3.timeMonth.every(3))
+                        // .tickFormat(d3.timeFormat('%b %y'))
+                        .scale(xScale);
+        
+            var yAxis = d3.axisLeft()
+                        .scale(yScale)
+                        // .ticks((slices[0].values).length / 5);
+            
+        
+            // append svg element to the body of the page
+            // set dimensions and position of the svg element
+
+            var svg = d3.select("#container1")
+                        .append("svg") 
+                        .attr("width", w)
+                        .attr("height", h);
+            
+            // append seocnd svg for second graph
+            var svg2 = d3.select("#container2")
+                          .append("svg") 
+                          .attr("width", w2)
+                          .attr("height", h2)
+                          .attr("transform", "translate(" + ((w + padding - w2) / 2) + ",0)");
+
+            // Add lines to chart
+
+            var line = d3.line()
+                        .x(function(d) { return xScale(+d.key); })
+                        .y(function(d) { return yScale(d.count); });
+                        
+            var lines  = svg.selectAll("lines")
+                        .data(aggdata)
+                        .enter()
+                        .append("g");
+
+            var colors = d3.scaleOrdinal(d3.schemeCategory10);
+
+            lines.append("path")
+                        .attr("class", "chartlines")
+                        .attr("d", function(d) { return line(d.values); })
+                        .style("stroke", function(d) {
+                            console.log(d.key)
+                            return colors(d.key)
+                            })
+                        .on("mouseover", function(d) {
+                          d3.select(this).attr("stroke-width", 4);
+                        })
+                        .on("mouseout", function(d) {
+                          d3.select(this).attr("stroke-width", 1);
+                        });
+                        
+            // Add labels to lines
+
+            // lines.append("text")
+            //             .attr("class", "series_label")
+            //             .datum(function(d) {
+            //                 return {
+            //                     id: d.id,
+            //                     value: d.values[d.values.length - 1]
+            //                 };
+            //             })
+            //             .attr("transform", function(d) {
+            //                 return "translate(" + (xScale(d.value.date) + 0)
+            //                 + "," + (yScale(d.value.measurement) + 0) + ")";
+            //             })
+            //             .attr("x", 5)
+            //             .text(function(d) {return (d.id); })
+            //             .style("fill", function(d) {
+            //                 return colors(d.id)
+            //             });
+            
+            // STAYS COMMENTED //
+
+            var circs = svg.selectAll("g.dot")
+                            // .data(ratings.filter(function(element, index) {
+                            //     var keep = [0,2,3,4];
+                            //     return keep.indexOf(index) >= 0;
+                            // }))
+                            .data(aggdata)
+                            .enter()
+                            .append("g")
+                            // .datum(function(d) {
+                            //     return {
+                            //         id: d.id,
+                            //         value: d.values
+                            //     }
+                            // })
+                            .style("fill", function(d) {
+                                return colors(d.key) })
+                            .selectAll("circles")
+                            // .data(function(d) { 
+                            //     return d.values.filter(function(element, index) {
+                            //         return index % 3 == 2; 
+                            //     });
+                            // })
+                            // .data(function(d) {
+                            //   return d;
+                            // })
+                            .data( function(d) {
+                              return d.values;
+                            })
+                            .enter()
+                            .append("circle")
+                                .attr("r", 5)
+                                // .attr("transform", function(d) {
+                                //     return "translate(" + (xScale(d.values.date)+ 0)
+                                //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                                // });
+                                .attr("cx", function(d) {
+                                    return xScale(+d.key);
+                                })
+                                .attr("cy", function(d) {
+                                    return yScale(d.count); 
+                                })
+                            .on("mouseover", function(d) { 
+                              // hoverstart(n[i])
+                              d3.select(this)
+                                .attr("r", 12);
+                              // console.log(d.values.sort((a, b) => (+a.users_rated < +b.users_rated) ? 1 : -1).slice(0,5).sort((a, b) => (a.name > b.name) ? 1 : -1));
+                              
+                              var thisdata = d.values.sort((a, b) => (+a.users_rated < +b.users_rated) ? 1 : -1).slice(0,5).sort((a, b) => (a.name > b.name) ? 1 : -1)
+
+                              // create scales x & y for X and Y axis and set their ranges
+                              var x2 = d3.scaleLinear()
+                                          .range([bigpadding2, w2 - bigpadding2])
+                                          .domain([0, d3.max(thisdata, function(d) { return +d.users_rated; }) + 50]);
+
+                              var y2 = d3.scaleBand()
+                                          .range([h2 - lilpadding2, lilpadding2])
+                                          .domain( thisdata.map(function(d) {
+                                            return d.name;
+                                          }));
+
+                              var xAxis2 = d3.axisBottom()
+                                            .scale(x2);
+
+                              var yAxis2 = d3.axisLeft()
+                                            .scale(y2)
+                                            .tickPadding(20);
+
+                              var colors2 = d3.scaleLinear().domain([1,5])
+                                              .range(["white", "green"]);
+
+
+                              // Get the data
+                              console.log(thisdata); // you should see the data in your browser's developer tools console 
+                                
+                                /* Create bar plot using mouseover data */
+                              if (thisdata.length > 0) {
+                                  // Add bars to svg - create new elements based on your data
+                                svg2.selectAll("rect")
+                                    .data(thisdata)
+                                    .enter()
+                                    .append("rect")
+                                    .attr("x", x2(0))
+                                    .attr("y", function(d) {
+                                      return y2(d.name) // - padding2
+                                      ;
+                                      //return y(h - d.running_total);
+                                      //return h - y(d.running_total)
+                                    })
+                                    /*.attr("width", 20)
+                                    .attr("height", 100)
+                                    /*.attr("x", function(d, i) {
+                                      return x(i * (w / data.length));
+                                    })*/
+                                    .attr("width", function(d) {
+                                      return x2(d.users_rated) - bigpadding2
+                                    })
+                                    // .attr("height", function(d) {
+                                    //   return (h2 - padding2) / (thisdata.length - barPadding2);
+                                    // })
+                                    .attr("height", y2.bandwidth() - barPadding2 )
+                                    .attr("fill", "chartreuse")
+                                    .attr("class", "smallbar")
+                                    ;
+
+
+                                // Add the X Axis
+                                svg2.append("g")
+                                    .call(xAxis2)
+                                    .attr("transform", "translate(0," + (h2 - lilpadding2) + ")")
+                                    ;
+
+                                // Add the text label for X Axis
+                                svg2.append("text")
+                                    .attr("text-anchor", "middle")
+                                    .attr("x", (w2 / 2 ))
+                                    .attr("y", h2 - lilpadding2 / 5)
+                                    .attr("font-family", "sans-serif")
+                                    .attr("font-size", "10px")
+                                    .text("Number of users");
+
+                                // Add the Y Axis
+                                svg2.append("g")
+                                    .attr("transform", "translate(" + bigpadding2 + ",0)" )
+                                    .call(yAxis2);
+
+                                // Add the text label for Y axis
+                                svg2.append("text")
+                                    .attr("text-anchor", "middle")
+                                    .attr("transform", "rotate(-90)")
+                                    .attr("y", bigpadding2 / 5)
+                                    .attr("x", 0 - (h2 / 2))
+                                    .attr("font-family", "sans-serif")
+                                    .attr("font-size", "10px")
+                                    .attr("class", "small_label" )
+                                    .text("Games");
+
+                                // Add the Chart TItle
+                                svg2.append("text")
+                                    .attr("text-anchor", "middle")
+                                    .attr("x", (w2 / 2 ))
+                                    .attr("y", lilpadding2 / 2)
+                                    .attr("font-family", "sans-serif")
+                                    .attr("font-size", "12px")
+                                    .text("Top 5 Most Rated games of " + d.values[0].year + " with Rating " + Math.floor(d.values[0].average_rating));
+
+                                /*// Add text labels to data
+                                svg.selectAll("text")
+                                    .data(data)
+                                    .enter()
+                                    .append("text")
+                                    .text(function(d) {
+                                      return d.running_total;
+                                    })
+                                    .attr("x", function(d, i) {
+                                      return i * (w / data.length) + 5; //+5?
+                                    })
+                                    .attr("y", function(d) {
+                                      return h - d.running_total + 15;
+                                    })
+                                    .attr("font-family", "sans-serif")
+                                    .attr("font-size", "11px")
+                                    .attr("fill", "white");*/
+                                // d.call(hoverstart)
+                                //  hoverstart(d3.select(this))
+                                  } else {null}
+                            })
+                            .on("mouseout", function(d) {
+                              //  d3.select(this).call(hoverstop)
+                              d3.select(this).transition().duration(2000)
+                                .attr("r", 5)
+                              svg2.selectAll("*").remove() 
+                              
+                            });
+                                
+            // var circlabs = svg.selectAll("g.labs")
+            //                     .data(ratings.filter(function(element, index) {
+            //                         var keep = [0,2,3,4];
+            //                         return keep.indexOf(index) >= 0;
+            //                     }))
+            //                     .enter()
+            //                     .append("g")
+            //                     .selectAll("circlelabels")
+            //                     .data(function(d) { 
+            //                         return d.values.filter(function(element, index) {
+            //                             return index % 3 == 2; 
+            //                         });
+            //                     })
+            //                     .enter()
+            //                     .append("text")
+            //                     .attr("class", "dot_label")
+            //                     .text(function(d) { return d.rank})
+            //                     .attr("x", function(d) { 
+            //                         return xScale(d.date);
+            //                     })
+            //                     .attr("y", function(d) { 
+            //                         return yScale(d.measurement);
+            //                     });
+            // STAYS COMMENTED ^^ //
+
+            // // Add the X Axis
+            
+            svg.append("g")
+                .attr("transform", "translate(0," + (h - padding) + ")")
+                .call(xAxis);
+        
+            // // Add the text label for X Axis
+
+            svg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", h - padding / 2)
+                .attr("font-family", "sans-serif")
+                .text("Rating");
+        
+            // // Add the Y Axis
+
+            svg.append("g")
+                .attr("transform", "translate(" + padding + ",0)" )
+                .call(yAxis);
+        
+            // // Add the text label for Y axis
+
+            svg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", "rotate(-90)")
+                .attr("y", padding / 3)
+                .attr("x", 0 - (h / 2))
+                .attr("font-family", "sans-serif")
+                .text("Count");
+            
+                // Add the Chart TItle
+            svg.append("text")
+                .attr("text-anchor", "middle")
+                .attr("x", (w / 2 ))
+                .attr("y", padding / 2)
+                .attr("font-family", "sans-serif")
+                .attr("font-size", "9px")
+                .text("cgraves36");
+
+            var yrs = [2015,2016,2017,2018,2019];
+                
+            var legend = svg.selectAll("g.legdot")
+                        // .data(ratings.filter(function(element, index) {
+                        //     var keep = [0,2,3,4];
+                        //     return keep.indexOf(index) >= 0;
+                        // }))
+                        .data(yrs)
+                        .enter()
+                        .append("g")
+                        // .datum(function(d) {
+                        //     return {
+                        //         id: d.id,
+                        //         value: d.values
+                        //     }
+                        // })
+                        .style("fill", function(d, i) {
+                            return colors(d) })
+                            .append("circle")
+                            .attr("r", 5)
+                            // .attr("transform", function(d) {
+                            //     return "translate(" + (xScale(d.values.date)+ 0)
+                            //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                            // });
+                            .attr("cx", function(d, i) {
+                                return w - padding;
+                            })
+                            .attr("cy", function(d, i) {
+                                return padding + (i*15);
+                            });
+
+            var leglab = svg.selectAll("legendlabs")
+                            .data(yrs)
+                            .enter()
+                            .append("text")
+                            .attr("class", "dot_label")
+                            .text(function(d) { 
+                                return d+"" ;
+                            })
+                            .attr("x", function(d) { 
+                                return w - padding + 25;
+                            })
+                            .attr("y", function(d, i) { 
+                                return padding + (i*15);
+                            });
+
+                        // .selectAll("legcircles")
+                        // // .data(function(d) { 
+                        // //     return d.values.filter(function(element, index) {
+                        // //         return index % 3 == 2; 
+                        // //     });
+                        // // })
+                        // // .data(function(d) {
+                        // //   return d;
+                        // // })
+                        // .data( function(d) {
+                        //   return d;
+                        // })
+                        // .enter()
+                        // .append("circle")
+                        //     .attr("r", 5)
+                        //     // .attr("transform", function(d) {
+                        //     //     return "translate(" + (xScale(d.values.date)+ 0)
+                        //     //     + "," + (yScale(d.values.measurement) + 0) + ")";
+                        //     // });
+                        //     .attr("cx", function(d, i) {
+                        //         return w - padding;
+                        //     })
+                        //     .attr("cy", function(d, i) {
+                        //         return h - padding; 
+
+        });
+      
+        function hoverstart(d) {
+          d3.select(d).transition()
+            .attr("r", 10);
+          console.log(d.__data__.values);  
+          // if (!d3.event.active) force.alphaTarget(0.3).restart();
+            // d.fx = d.x;
+            // d.fy = d.y;
+        };
+
+        function dragged(d) {
+            d.fx = d3.event.x;
+            d.fy = d3.event.y;
+        };
+
+        function hoverstop(d) {
+          d3.select(d).transition().duration(2000)
+            .attr("r", 5);
+            // if (!d3.event.active) force.alphaTarget(0);
+            // d.fixed = true;
+            // if (d.fixed == true) {
+            //     d.fx = d.x;
+            //     d.fy = d.y;
+            //     d3.select(this).select("circle").style("fill", "lavender")
+            // }
+            // else {
+            //     d.fx = null;
+            //     d.fy = null;
+            // }
+        };
+</script>
+
+</body>
